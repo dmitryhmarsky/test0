@@ -23,8 +23,8 @@ try:
 except Exception:  # noqa: BLE001
     pystray = None
 
-ACCENT = "#e0218a"
-ACCENT_HOVER = "#b8186f"
+ACCENT = "#c01878"
+ACCENT_HOVER = "#9c1262"
 CARD = ("#ffffff", "#1f2125")
 CARD_BORDER = ("#e3e5e8", "#2b2e33")
 SIDEBAR = ("#eef0f2", "#16171a")

@@ -1,6 +1,6 @@
 from PIL import Image, ImageDraw
 
-ACCENT = (224, 33, 138)
+ACCENT = (192, 24, 120)
 
 
 def app_icon(size=64, state="recording"):
