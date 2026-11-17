@@ -17,14 +17,27 @@ _encoder_cache = {}
 
 
 def encoder_works(ffmpeg, enc):
+    """Реально кодирует несколько кадров в файл. Код возврата ffmpeg не всегда
+    отражает ошибку открытия энкодера, поэтому проверяем и вывод, и сам файл."""
     pix = "yuv420p" if enc == "libx264" else "nv12"
+    out = TEMP_DIR / f"enc_test_{enc}.mp4"
     try:
-        r = run_quiet([ffmpeg, "-hide_banner", "-loglevel", "error",
-                       "-f", "lavfi", "-i", "color=c=black:s=1280x720:r=30:d=0.5",
-                       "-pix_fmt", pix, "-c:v", enc, "-f", "null", "-"])
-        return r.returncode == 0
+        TEMP_DIR.mkdir(parents=True, exist_ok=True)
+        out.unlink(missing_ok=True)
+        r = run_quiet([ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+                       "-f", "lavfi", "-i", "testsrc2=s=1920x1080:r=30:d=1",
+                       "-pix_fmt", pix, "-c:v", enc, "-b:v", "8M", str(out)])
+        err = r.stderr.decode(errors="ignore").lower()
+        bad = any(k in err for k in ("error", "failed", "not support", "cannot", "could not"))
+        ok = r.returncode == 0 and not bad and out.exists() and out.stat().st_size > 1000
+        return ok
     except Exception:  # noqa: BLE001
         return False
+    finally:
+        try:
+            out.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def detect_encoder(ffmpeg):
