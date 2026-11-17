@@ -64,8 +64,7 @@ class LoopbackSource:
         self._running = False
 
     def ffmpeg_input_args(self):
-        return ["-f", "s16le", "-ar", str(self.rate), "-ac", str(self.channels),
-                "-thread_queue_size", "1024", "-i", "pipe:0"]
+        return ["-f", "s16le", "-ar", str(self.rate), "-ac", str(self.channels), "-i", "pipe:0"]
 
     def _callback(self, data, frames, _time, _status):
         with self._lock:

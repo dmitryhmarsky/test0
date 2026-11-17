@@ -11,7 +11,7 @@ from replay.recorder import Recorder  # noqa: E402
 
 out = Path(tempfile.mkdtemp())
 ok = True
-for capture in ("ddagrab", "gdigrab"):
+for capture in ("auto", "gdigrab"):
     cfg = dict(config.DEFAULTS, capture=capture, replay_seconds=8, height=1080, fps=30,
                output_dir=str(out / capture), system_audio=True)
     r = Recorder(cfg)
@@ -29,5 +29,5 @@ for capture in ("ddagrab", "gdigrab"):
         print("\n".join(l for l in info.splitlines() if "Duration" in l or "Stream" in l))
     else:
         print(f"!! {capture}: повтор не сохранён")
-        ok = False if capture == "gdigrab" else ok
+        ok = False
 sys.exit(0 if ok else 1)

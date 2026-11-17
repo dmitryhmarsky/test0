@@ -71,6 +71,7 @@ class Recorder:
         if cap == "auto":
             cap = "ddagrab" if IS_WIN and has_ddagrab(self.ffmpeg) else "gdigrab"
         self.capture = cap
+        self.capture_auto = cfg["capture"] == "auto"
 
     @property
     def output_dir(self):
@@ -108,8 +109,7 @@ class Recorder:
                   f"ddagrab=output_idx={int(c['monitor'])}:framerate={fps}:draw_mouse={mouse}"]
             vpre = "hwdownload,format=bgra,"
         elif self.capture == "gdigrab":
-            a += ["-f", "gdigrab", "-framerate", str(fps), "-draw_mouse", mouse,
-                  "-thread_queue_size", "512", "-i", "desktop"]
+            a += ["-f", "gdigrab", "-framerate", str(fps), "-draw_mouse", mouse, "-i", "desktop"]
             vpre = ""
         else:  # test — генератор картинки и тона, для отладки
             a += ["-re", "-f", "lavfi", "-i", f"testsrc2=s={h * 16 // 9}x{h}:r={fps}"]
@@ -130,8 +130,7 @@ class Recorder:
             labels.append("[sys]")
             idx += 1
         if c["mic_enabled"] and c["mic_device"]:
-            a += ["-f", "dshow", "-audio_buffer_size", "50", "-thread_queue_size", "512",
-                  "-i", f"audio={c['mic_device']}"]
+            a += ["-f", "dshow", "-audio_buffer_size", "50", "-i", f"audio={c['mic_device']}"]
             mv = int(c["mic_volume"]) / 100 * 10 ** (float(c["mic_gain_db"]) / 20)
             filters.append(f"[{idx}:a]aresample=48000:async=1,aformat=channel_layouts=stereo,"
                            f"volume={mv:.3f}[mic]")
@@ -226,6 +225,13 @@ class Recorder:
                         fails, self.error = 0, ""
                     continue
                 fails += 1
+                if self.capture == "ddagrab" and self.capture_auto and fails >= 2:
+                    # Desktop Duplication недоступен (нет GPU/драйвера) — пробуем GDI
+                    self.capture = "gdigrab"
+                    self.log("ddagrab не запускается, переключаюсь на gdigrab")
+                    self._kill()
+                    self._spawn()
+                    continue
                 self.error = f"ffmpeg остановился (код {code}), перезапуск…"
                 self.log(self.error + f" Лог: {self.buffer_dir / 'ffmpeg.log'}")
                 self._kill()

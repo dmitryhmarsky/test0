@@ -33,7 +33,6 @@ jobs:
           .\ffmpeg.exe -hide_banner -version | Select-Object -First 1
 
       - name: Smoke test (screen capture on Windows)
-        continue-on-error: true
         run: python tools/smoke_test.py
 
       - name: Build app (PyInstaller, onedir)
