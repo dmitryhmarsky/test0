@@ -374,7 +374,8 @@ class App(ctk.CTk):
         top.grid(row=0, column=0, sticky="ew", padx=22, pady=(20, 6))
         self.status_dot = ctk.CTkLabel(top, text="●", font=ctk.CTkFont(size=26))
         self.status_dot.pack(side="left")
-        self.status_text = ctk.CTkLabel(top, text="Запуск…", font=ctk.CTkFont(size=20, weight="bold"))
+        self.status_text = ctk.CTkLabel(top, text="Запуск…", font=ctk.CTkFont(size=20, weight="bold"),
+                                        wraplength=640, justify="left")
         self.status_text.pack(side="left", padx=10)
         self.status_info = ctk.CTkLabel(st, text="", text_color=MUTED, anchor="w")
         self.status_info.grid(row=1, column=0, sticky="ew", padx=22)

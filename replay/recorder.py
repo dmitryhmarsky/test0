@@ -72,6 +72,9 @@ class Recorder:
             cap = "ddagrab" if IS_WIN and has_ddagrab(self.ffmpeg) else "gdigrab"
         self.capture = cap
         self.capture_auto = cfg["capture"] == "auto"
+        self.no_mic = False
+        self.no_sys = False
+        self.degraded = []   # что пришлось отключить, чтобы запись заработала
 
     @property
     def output_dir(self):
@@ -89,13 +92,64 @@ class Recorder:
         if self.paused:
             return "paused", "Пауза"
         if self.running:
-            return "recording", "Идёт запись"
+            return "recording", "Идёт запись" + (f" ({', '.join(self.degraded)})" if self.degraded else "")
         return "stopped", "Остановлено"
 
     def buffered_seconds(self):
-        if not self.running or self.paused:
+        """Сколько секунд реально есть в буфере (по записанным сегментам)."""
+        if not self.running or self.paused or self.error:
             return 0
-        return min(int(self.cfg["replay_seconds"]), int(time.time() - self.started_at))
+        now, total = time.time(), int(self.cfg["replay_seconds"])
+        try:
+            n = sum(1 for f in self.buffer_dir.glob("seg_*.ts")
+                    if f.stat().st_size > 0 and f.stat().st_mtime >= now - total)
+        except OSError:
+            return 0
+        return min(total, n * SEGMENT)
+
+    def last_error(self):
+        """(последняя строка ошибки ffmpeg, весь вывод последнего запуска в нижнем регистре)."""
+        try:
+            text = (self.buffer_dir / "ffmpeg.log").read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            return "", ""
+        run = text.rsplit("\n=== ", 1)[-1].split("\n", 1)  # первая строка — сама команда
+        out = run[1] if len(run) > 1 else ""
+        lines = [ln.strip() for ln in out.splitlines() if ln.strip()]
+        keys = ("error", "failed", "cannot", "could not", "invalid", "not ", "unable")
+        errs = [ln for ln in lines if any(k in ln.lower() for k in keys)]
+        return (errs or lines or [""])[-1][:200], out.lower()
+
+    def _fallback(self, log_tail):
+        """Отключает то, что мешает запуску. Возвращает описание или None."""
+        t = log_tail
+        guess = None
+        if any(k in t for k in ("ddagrab", "d3d11", "duplicat", "output_idx")):
+            guess = "capture"
+        elif any(k in t for k in ("nvenc", "amf", "qsv", "encoder", "codec", "cuda", "driver")):
+            guess = "encoder"
+        elif "dshow" in t or "audio=" in t:
+            guess = "mic"
+        elif "pipe:" in t or "s16le" in t:
+            guess = "sys"
+        order = [guess] + ["capture", "encoder", "mic", "sys"]
+        for step in order:
+            if step == "capture" and self.capture == "ddagrab" and self.capture_auto:
+                self.capture = "gdigrab"
+                return "захват через GDI"
+            if step == "encoder" and self.cfg["encoder"] == "auto" and self.encoder != "libx264":
+                names = ["h264_nvenc", "h264_amf", "h264_qsv", "libx264"]
+                for enc in names[names.index(self.encoder) + 1:]:
+                    if encoder_works(self.ffmpeg, enc):
+                        self.encoder = enc
+                        return f"кодировщик {ENCODER_NAMES[enc]}"
+            if step == "mic" and self.cfg["mic_enabled"] and self.cfg["mic_device"] and not self.no_mic:
+                self.no_mic = True
+                return "без микрофона"
+            if step == "sys" and self.cfg["system_audio"] and not self.no_sys:
+                self.no_sys = True
+                return "без звука системы"
+        return None
 
     # ---------- команда ffmpeg ----------
     def _build_cmd(self, loopback):
@@ -124,12 +178,12 @@ class Recorder:
             filters.append(f"[{idx}:a]aresample=48000,aformat=channel_layouts=stereo,volume={vol:.2f}[sys]")
             labels.append("[sys]")
             idx += 1
-        elif c["system_audio"] and self.capture == "test":
+        elif c["system_audio"] and not self.no_sys and self.capture == "test":
             a += ["-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000"]
             filters.append(f"[{idx}:a]aformat=channel_layouts=stereo,volume={int(c['system_volume']) / 100:.2f}[sys]")
             labels.append("[sys]")
             idx += 1
-        if c["mic_enabled"] and c["mic_device"]:
+        if c["mic_enabled"] and c["mic_device"] and not self.no_mic:
             a += ["-f", "dshow", "-audio_buffer_size", "50", "-i", f"audio={c['mic_device']}"]
             mv = int(c["mic_volume"]) / 100 * 10 ** (float(c["mic_gain_db"]) / 20)
             filters.append(f"[{idx}:a]aresample=48000:async=1,aformat=channel_layouts=stereo,"
@@ -191,7 +245,7 @@ class Recorder:
             except OSError:
                 pass
         loopback = None
-        if self.cfg["system_audio"] and self.capture != "test":
+        if self.cfg["system_audio"] and not self.no_sys and self.capture != "test":
             try:
                 loopback = audio.LoopbackSource(self.cfg["system_device"])
             except Exception as e:  # noqa: BLE001
@@ -225,16 +279,19 @@ class Recorder:
                         fails, self.error = 0, ""
                     continue
                 fails += 1
-                if self.capture == "ddagrab" and self.capture_auto and fails >= 2:
-                    # Desktop Duplication недоступен (нет GPU/драйвера) — пробуем GDI
-                    self.capture = "gdigrab"
-                    self.log("ddagrab не запускается, переключаюсь на gdigrab")
-                    self._kill()
-                    self._spawn()
-                    continue
-                self.error = f"ffmpeg остановился (код {code}), перезапуск…"
-                self.log(self.error + f" Лог: {self.buffer_dir / 'ffmpeg.log'}")
+                msg, tail = self.last_error()
+                self.error = msg or f"ffmpeg остановился (код {code})"
+                self.log(f"ffmpeg остановился (код {code}): {msg}. Лог: {self.buffer_dir / 'ffmpeg.log'}")
                 self._kill()
+                if fails >= 2:
+                    change = self._fallback(tail)
+                    if change:
+                        self.degraded.append(change)
+                        self.log(f"Запись не запускается, пробую: {change}")
+                        fails = 0
+                        self.started_at = time.time()
+                        self._spawn()
+                        continue
             time.sleep(min(30, 2 * fails))
             with self._lock:
                 if self._alive(run_id) and not self.paused and self.proc is None:
@@ -271,8 +328,17 @@ class Recorder:
     def restart(self, cfg, clear):
         self.stop()
         self.cfg = dict(cfg)
+        self.no_mic = self.no_sys = False
+        self.degraded = []
         if cfg["encoder"] != "auto":
             self.encoder = cfg["encoder"]
+        else:
+            self.encoder = detect_encoder(self.ffmpeg)
+        if cfg["capture"] == "auto":
+            self.capture = "ddagrab" if IS_WIN and has_ddagrab(self.ffmpeg) else "gdigrab"
+        else:
+            self.capture = cfg["capture"]
+        self.capture_auto = cfg["capture"] == "auto"
         self.start(clear=clear)
 
     # ---------- сохранение ----------
