@@ -1,5 +1,4 @@
 """Проверка на настоящей Windows: запись экрана 10 с и сохранение повтора."""
-import os
 import subprocess
 import sys
 import tempfile

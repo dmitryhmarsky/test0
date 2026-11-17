@@ -10,7 +10,7 @@ from pathlib import Path
 
 from . import audio
 from .config import IS_WIN, TEMP_DIR, bitrate_mbps
-from .system import NO_WINDOW, find_ffmpeg, run_quiet
+from .system import NO_WINDOW, find_ffmpeg, run_quiet, safe_print
 
 SEGMENT = 2  # секунд в одном сегменте
 _encoder_cache = {}
@@ -51,7 +51,7 @@ ENCODER_NAMES = {"h264_nvenc": "NVIDIA NVENC", "h264_amf": "AMD AMF",
 
 
 class Recorder:
-    def __init__(self, cfg, log=print):
+    def __init__(self, cfg, log=safe_print):
         self.cfg = dict(cfg)
         self.log = log
         self.ffmpeg = find_ffmpeg(cfg.get("ffmpeg_path", ""))

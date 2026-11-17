@@ -118,6 +118,14 @@ class Card(ctk.CTkFrame):
 class App(ctk.CTk):
     def __init__(self, start_hidden=False):
         self.cfg = config.load()
+        if config.IS_WIN:
+            # автозагрузку мог включить установщик — берём состояние из реестра
+            self.cfg["autostart"] = system.get_autostart()
+            if self.cfg["autostart"]:
+                try:
+                    system.set_autostart(True)  # обновить путь к exe
+                except Exception:  # noqa: BLE001
+                    pass
         ctk.set_appearance_mode(self.cfg.get("appearance", "dark"))
         ctk.set_default_color_theme("green")
         _patch_theme()
@@ -168,12 +176,6 @@ class App(ctk.CTk):
         self.after(50, self._poll_queue)
         self.after(1000, self._tick)
 
-        # синхронизация автозагрузки с реестром (путь к exe мог измениться)
-        if self.cfg["autostart"]:
-            try:
-                system.set_autostart(True)
-            except Exception:  # noqa: BLE001
-                pass
 
         system.start_instance_server(lambda: self.q.put(self.show_window))
         self._start_tray()
@@ -197,7 +199,7 @@ class App(ctk.CTk):
         self.after(50, self._poll_queue)
 
     def log(self, msg):
-        print(f"[{datetime.now():%H:%M:%S}] {msg}", flush=True)
+        system.safe_print(f"[{datetime.now():%H:%M:%S}] {msg}")
 
     def set_cfg(self, key, value):
         if self.cfg.get(key) == value:
@@ -938,6 +940,8 @@ def run(start_hidden=False):
     if config.IS_WIN:
         try:
             import ctypes
+            # по этому мьютексу установщик понимает, что программа запущена
+            run.mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "InstantReplayAppMutex")
             ctypes.windll.shcore.SetProcessDpiAwareness(2)
         except Exception:  # noqa: BLE001
             pass

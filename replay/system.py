@@ -14,6 +14,18 @@ from .config import BASE_DIR, IS_WIN, TEMP_DIR
 NO_WINDOW = 0x08000000 if IS_WIN else 0  # CREATE_NO_WINDOW
 
 
+def safe_print(msg):
+    """print, который не падает без консоли (pythonw) и на консоли cp1252."""
+    try:
+        print(msg, flush=True)
+    except Exception:  # noqa: BLE001
+        try:
+            sys.stdout.buffer.write((str(msg) + "\n").encode("utf-8", "replace"))
+            sys.stdout.flush()
+        except Exception:  # noqa: BLE001
+            pass
+
+
 def run_quiet(args, timeout=20):
     return subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                           stdin=subprocess.DEVNULL, timeout=timeout, creationflags=NO_WINDOW)
