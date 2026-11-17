@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: write   # публикация релиза
-  actions: read     # SignPath скачивает артефакты сборки
 
 env:
   PYTHONIOENCODING: utf-8
@@ -16,9 +15,6 @@ env:
 jobs:
   build:
     runs-on: windows-latest
-    env:
-      # Подпись включается только для релизов (тег v*) и когда SignPath настроен
-      SIGN: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.SIGNPATH_API_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -57,36 +53,6 @@ jobs:
       - name: Add ffmpeg and notices
         run: Copy-Item ffmpeg.exe, LICENSE, THIRD_PARTY_NOTICES.md dist\InstantReplay\
 
-      # ---------- подпись программы (SignPath Foundation) ----------
-      - name: Upload unsigned app
-        if: env.SIGN == 'true'
-        id: upload-app
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-unsigned
-          path: dist/InstantReplay
-
-      - name: Sign app
-        if: env.SIGN == 'true'
-        uses: signpath/github-action-submit-signing-request@v1
-        with:
-          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
-          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'InstantReplay' }}
-          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
-          artifact-configuration-slug: app
-          github-artifact-id: ${{ steps.upload-app.outputs.artifact-id }}
-          wait-for-completion: true
-          wait-for-completion-timeout-in-seconds: 3600
-          output-artifact-directory: signed-app
-
-      - name: Use signed app
-        if: env.SIGN == 'true'
-        shell: pwsh
-        run: |
-          Copy-Item signed-app\* dist\InstantReplay\ -Recurse -Force
-          Get-AuthenticodeSignature dist\InstantReplay\InstantReplay.exe | Format-List Status, SignerCertificate
-
       # ---------- установщик ----------
       - name: Build installer (Inno Setup)
         shell: pwsh
@@ -97,46 +63,15 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Get-ChildItem Output
 
-      - name: Upload unsigned installer
-        id: upload-installer
-        uses: actions/upload-artifact@v4
-        with:
-          name: InstantReplay-Setup${{ env.SIGN == 'true' && '-unsigned' || '' }}
-          path: Output/*.exe
-
-      - name: Sign installer
-        if: env.SIGN == 'true'
-        uses: signpath/github-action-submit-signing-request@v1
-        with:
-          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
-          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'InstantReplay' }}
-          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
-          artifact-configuration-slug: installer
-          github-artifact-id: ${{ steps.upload-installer.outputs.artifact-id }}
-          wait-for-completion: true
-          wait-for-completion-timeout-in-seconds: 3600
-          output-artifact-directory: signed-installer
-
-      - name: Collect final installer
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory release -Force | Out-Null
-          $src = if ($env:SIGN -eq 'true') { "signed-installer" } else { "Output" }
-          Copy-Item "$src\*.exe" release\
-          Get-ChildItem release -Filter *.exe | Get-AuthenticodeSignature | Format-List Path, Status
-
-      - name: Upload signed installer
-        if: env.SIGN == 'true'
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: InstantReplay-Setup
-          path: release/*.exe
+          path: Output/*.exe
 
       # ---------- релиз ----------
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: release/*.exe
+          files: Output/*.exe
           generate_release_notes: true

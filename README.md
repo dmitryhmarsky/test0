@@ -24,9 +24,18 @@
 
 ## Установка
 
-1. Установите [Python 3.10+](https://www.python.org/downloads/) (с галочками «tcl/tk» и «Add to PATH»).
-2. Скачайте [ffmpeg 6.0+](https://www.gyan.dev/ffmpeg/builds/) (`ffmpeg-release-full.7z`) и положите `ffmpeg.exe` в папку с программой.
-3. Запустите `run.bat`. Если нужен один exe-файл — запустите `build.bat`, результат появится в `dist\InstantReplay.exe`.
+1. Скачайте `InstantReplay-Setup-….exe` со страницы [Releases](../../releases)
+   (или из последней сборки во вкладке [Actions](../../actions) → «Artifacts»).
+2. Установщик не подписан, поэтому Windows покажет «Windows защитила ваш компьютер» —
+   нажмите **«Подробнее» → «Выполнить в любом случае»**.
+   Либо заранее: правой кнопкой по файлу → «Свойства» → галочка «Разблокировать».
+3. Следуйте шагам установщика. ffmpeg уже внутри, Python не нужен.
+
+### Запуск из исходников
+
+1. [Python 3.10+](https://www.python.org/downloads/) (с «tcl/tk» и «Add to PATH»).
+2. [ffmpeg 6.0+](https://www.gyan.dev/ffmpeg/builds/) — `ffmpeg.exe` в папку с программой.
+3. `run.bat`
 
 Настройки хранятся в `%APPDATA%\InstantReplay\config.json`, ролики сохраняются в `Видео\InstantReplay`.
 
@@ -37,25 +46,7 @@
 - Если запись не запускается, откройте «Общие → Журнал ffmpeg».
 - Изменение разрешения, FPS или источников звука перезапускает буфер; громкость меняется без потери буфера.
 
-## Скачать
-
-Готовый установщик — на странице [Releases](../../releases).
-
-## Code signing policy
-
-Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
-
-- Committers and reviewers: [dmitryhmarsky](https://github.com/dmitryhmarsky)
-- Approvers: [dmitryhmarsky](https://github.com/dmitryhmarsky)
-
-Подписываются только файлы, собранные из исходного кода этого репозитория в GitHub Actions
-(`InstantReplay.exe` и установщик). Сторонние программы (например, `ffmpeg.exe`) не подписываются,
-см. [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-
-## Privacy policy
-
-This program will not transfer any information to other networked systems unless specifically requested
-by the user or the person installing or operating it.
+## Приватность
 
 Программа ничего не отправляет в интернет: записи и настройки хранятся только на вашем компьютере.
 
