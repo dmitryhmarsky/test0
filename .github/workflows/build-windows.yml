@@ -11,6 +11,9 @@ env:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      HAS_AZURE_SIGNING: ${{ secrets.AZURE_CLIENT_ID != '' }}
+      HAS_PFX_SIGNING: ${{ secrets.SIGN_PFX_BASE64 != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -44,9 +47,7 @@ jobs:
 
       # ---------- подпись (включается, когда в Secrets заданы данные сертификата) ----------
       - name: Sign app (Azure Artifact Signing)
-        if: ${{ env.AZURE_CLIENT_ID != '' }}
-        env:
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        if: env.HAS_AZURE_SIGNING == 'true'
         uses: azure/trusted-signing-action@v0
         with:
           azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -63,7 +64,7 @@ jobs:
           timestamp-digest: SHA256
 
       - name: Sign app (PFX certificate)
-        if: ${{ env.SIGN_PFX != '' }}
+        if: env.HAS_PFX_SIGNING == 'true'
         env:
           SIGN_PFX: ${{ secrets.SIGN_PFX_BASE64 }}
           SIGN_PFX_PASSWORD: ${{ secrets.SIGN_PFX_PASSWORD }}
@@ -86,9 +87,7 @@ jobs:
           Get-ChildItem Output
 
       - name: Sign installer (Azure Artifact Signing)
-        if: ${{ env.AZURE_CLIENT_ID != '' }}
-        env:
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        if: env.HAS_AZURE_SIGNING == 'true'
         uses: azure/trusted-signing-action@v0
         with:
           azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -104,7 +103,7 @@ jobs:
           timestamp-digest: SHA256
 
       - name: Sign installer (PFX certificate)
-        if: ${{ env.SIGN_PFX != '' }}
+        if: env.HAS_PFX_SIGNING == 'true'
         env:
           SIGN_PFX: ${{ secrets.SIGN_PFX_BASE64 }}
           SIGN_PFX_PASSWORD: ${{ secrets.SIGN_PFX_PASSWORD }}
