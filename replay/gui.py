@@ -23,8 +23,8 @@ try:
 except Exception:  # noqa: BLE001
     pystray = None
 
-ACCENT = "#76b900"
-ACCENT_HOVER = "#5e9400"
+ACCENT = "#e0218a"
+ACCENT_HOVER = "#b8186f"
 CARD = ("#ffffff", "#1f2125")
 CARD_BORDER = ("#e3e5e8", "#2b2e33")
 SIDEBAR = ("#eef0f2", "#16171a")
@@ -347,7 +347,7 @@ class App(ctk.CTk):
                 p.grid_forget()
         for k, b in self.nav.items():
             b.configure(fg_color=(ACCENT, ACCENT) if k == key else "transparent",
-                        text_color=("#ffffff", "#0d0f0b") if k == key else ("#1d1f23", "#d7dae0"),
+                        text_color=("#ffffff", "#ffffff") if k == key else ("#1d1f23", "#d7dae0"),
                         hover_color=(ACCENT_HOVER, ACCENT_HOVER) if k == key else ("#e0e3e7", "#24272c"))
         self.page_title.configure(text=titles[key])
         self.current_page = key
@@ -387,7 +387,7 @@ class App(ctk.CTk):
         act.grid_columnconfigure((0, 1, 2), weight=1)
         self.save_btn = ctk.CTkButton(act, text="⏺  Сохранить повтор", height=56, corner_radius=12,
                                       font=ctk.CTkFont(size=17, weight="bold"), fg_color=ACCENT,
-                                      hover_color=ACCENT_HOVER, text_color="#0d0f0b",
+                                      hover_color=ACCENT_HOVER, text_color="#ffffff",
                                       command=self.save_replay)
         self.save_btn.grid(row=0, column=0, columnspan=3, sticky="ew", padx=22, pady=(22, 6))
         self.save_hint = ctk.CTkLabel(act, text="", text_color=MUTED, font=ctk.CTkFont(size=12))
@@ -488,7 +488,7 @@ class App(ctk.CTk):
         btns.grid(row=3, column=0, columnspan=3, sticky="ew", padx=10, pady=(6, 12))
         btns.grid_columnconfigure(0, weight=1)
         ctk.CTkButton(btns, text="▶  Смотреть", height=30, corner_radius=8, fg_color=ACCENT,
-                      hover_color=ACCENT_HOVER, text_color="#0d0f0b",
+                      hover_color=ACCENT_HOVER, text_color="#ffffff",
                       command=lambda: system.open_path(f)).grid(row=0, column=0, sticky="ew")
         kw = dict(width=36, height=30, corner_radius=8, fg_color=("#e7e9ec", "#2a2d33"),
                   hover_color=("#d9dce0", "#353941"), text_color=("#1d1f23", "#e6e8eb"))
@@ -702,7 +702,7 @@ class App(ctk.CTk):
         if keyboard is None or self.capturing_hotkey:
             return
         self.capturing_hotkey = key
-        self.hotkey_buttons[key].configure(text="Нажмите сочетание…", fg_color=ACCENT, text_color="#0d0f0b")
+        self.hotkey_buttons[key].configure(text="Нажмите сочетание…", fg_color=ACCENT, text_color="#ffffff")
         try:
             keyboard.unhook_all_hotkeys()
         except Exception:  # noqa: BLE001
@@ -871,7 +871,7 @@ class App(ctk.CTk):
             self._toast.destroy()
         self._toast = ctk.CTkLabel(self, text=f"  {text}  ", corner_radius=10, height=40,
                                    fg_color="#e5484d" if error else ACCENT,
-                                   text_color="#ffffff" if error else "#0d0f0b",
+                                   text_color="#ffffff",
                                    font=ctk.CTkFont(size=13, weight="bold"))
         self._toast.place(relx=0.5, rely=1.0, y=-24, anchor="s")
         self.toast_job = self.after(3000, lambda: (self._toast.destroy(), setattr(self, "toast_job", None)))
