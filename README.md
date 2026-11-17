@@ -36,3 +36,29 @@
 - Если игра запущена от администратора, программу тоже нужно запустить от администратора, иначе горячие клавиши не сработают.
 - Если запись не запускается, откройте «Общие → Журнал ffmpeg».
 - Изменение разрешения, FPS или источников звука перезапускает буфер; громкость меняется без потери буфера.
+
+## Скачать
+
+Готовый установщик — на странице [Releases](../../releases).
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
+
+- Committers and reviewers: [dmitryhmarsky](https://github.com/dmitryhmarsky)
+- Approvers: [dmitryhmarsky](https://github.com/dmitryhmarsky)
+
+Подписываются только файлы, собранные из исходного кода этого репозитория в GitHub Actions
+(`InstantReplay.exe` и установщик). Сторонние программы (например, `ffmpeg.exe`) не подписываются,
+см. [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## Privacy policy
+
+This program will not transfer any information to other networked systems unless specifically requested
+by the user or the person installing or operating it.
+
+Программа ничего не отправляет в интернет: записи и настройки хранятся только на вашем компьютере.
+
+## Лицензия
+
+[MIT](LICENSE). Сторонние компоненты — см. [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
